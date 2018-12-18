@@ -6,7 +6,7 @@ dependencies {
 
     testCompile "$corda_release_group:corda-node-driver:${corda_release_version}"
 
-    compile project(':indy-utils')
+    compile project(':cordentity-indy-utils')
 }
 
 apply plugin: 'maven-publish'

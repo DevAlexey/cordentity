@@ -8,10 +8,10 @@ dependencies {
 
     testCompile "$corda_release_group:corda-node-driver:${corda_release_version}"
 
-    cordapp project(":cordapp-contracts-states")
-    compile project(':indy-utils')
+    cordapp project(":cordentity-cordapp-contracts-states")
+    compile project(':cordentity-indy-utils')
 
-    compile (project(':cordlib')){
+    compile (project(':cordentity-cordlib')){
         transitive = false
     }
 }

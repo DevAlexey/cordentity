@@ -35,8 +35,6 @@ subprojects {
     apply plugin: 'idea'
     apply plugin: 'net.corda.plugins.cordformation'
     apply plugin: 'net.corda.plugins.quasar-utils'
-
-    jar.baseName = "$rootProject.name-$it.name"
     
     sourceSets {
         main.resources {
