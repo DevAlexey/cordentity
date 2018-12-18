@@ -10,6 +10,10 @@ dependencies {
 
     cordapp project(":cordapp-contracts-states")
     compile project(':indy-utils')
+
+    compile (project(':cordlib')){
+        transitive = false
+    }
 }
 
 apply plugin: 'maven-publish'
@@ -21,5 +25,3 @@ publishing {
         }
     }
 }
-
-apply from: "$rootDir/indy-run.gradle"

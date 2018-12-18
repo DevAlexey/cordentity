@@ -1,4 +1,7 @@
-include 'indy-utils'
-include 'cordapp'
-include 'cordapp-contracts-states'
+rootProject.name = name
 
+include 'indy-utils'
+include 'cordlib'
+include 'cordapp'
+include 'cordlib-contracts-states'
+include 'cordapp-contracts-states'

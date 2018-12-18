@@ -139,7 +139,7 @@ open class CordaTestBase {
         }
 
         net = InternalMockNetwork(
-            cordappPackages = listOf("com.luxoft.blockchainlab.corda.hyperledger.indy"),
+            cordappPackages = listOf("src/main/kotlin/com.luxoft.blockchainlab.corda.hyperledger.indy"),
             networkParameters = testNetworkParameters(maxTransactionSize = 10485760 * 5)
         )
     }

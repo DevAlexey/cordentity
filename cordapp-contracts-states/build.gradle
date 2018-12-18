@@ -9,6 +9,10 @@ dependencies {
     testCompile "$corda_release_group:corda-node-driver:${corda_release_version}"
 
     compile project(':indy-utils')
+
+    compile (project(':cordlib-contracts-states')) {
+        transitive = false
+    }
 }
 
 apply plugin: 'maven-publish'
