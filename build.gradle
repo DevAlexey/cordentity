@@ -39,7 +39,6 @@ subprojects {
     sourceSets {
         main.resources {
             srcDir "config/dev"
-            srcDir "$rootDir/genesis"
         }
         test.resources {
             srcDir "config/test"
