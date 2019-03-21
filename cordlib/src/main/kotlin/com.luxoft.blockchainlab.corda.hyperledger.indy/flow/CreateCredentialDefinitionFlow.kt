@@ -4,7 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import com.luxoft.blockchainlab.corda.hyperledger.indy.contract.IndyCredentialDefinitionContract
 import com.luxoft.blockchainlab.corda.hyperledger.indy.contract.IndySchemaContract
 import com.luxoft.blockchainlab.corda.hyperledger.indy.data.state.IndyCredentialDefinition
-import com.luxoft.blockchainlab.hyperledger.indy.*
+import com.luxoft.blockchainlab.hyperledger.indy.IndyCredentialDefinitionAlreadyExistsException
+import com.luxoft.blockchainlab.hyperledger.indy.IndySchemaNotFoundException
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialDefinitionId
 import com.luxoft.blockchainlab.hyperledger.indy.models.SchemaId
 import net.corda.core.contracts.Command
@@ -77,7 +78,7 @@ object CreateCredentialDefinitionFlow {
 
                 val selfSignedTx = serviceHub.signInitialTransaction(trxBuilder, ourIdentity.owningKey)
 
-                subFlow(FinalityFlow(selfSignedTx))
+                subFlow(FinalityFlow(selfSignedTx, listOf()))
 
                 return credentialDefinitionId
 

@@ -9,7 +9,9 @@ import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.getCredentialDefinit
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.indyUser
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.whoIs
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.whoIsNotary
-import com.luxoft.blockchainlab.hyperledger.indy.*
+import com.luxoft.blockchainlab.hyperledger.indy.IndyCredentialDefinitionNotFoundException
+import com.luxoft.blockchainlab.hyperledger.indy.IndyCredentialMaximumReachedException
+import com.luxoft.blockchainlab.hyperledger.indy.IndyUser
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialDefinitionId
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialOffer
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialRequestInfo
@@ -129,7 +131,7 @@ object IssueCredentialFlowB2B {
                 val signedTrx = subFlow(CollectSignaturesFlow(selfSignedTx, listOf(flowSession)))
 
                 // Notarise and record the transaction in both parties' vaults.
-                subFlow(FinalityFlow(signedTrx))
+                subFlow(FinalityFlow(signedTrx, listOf(flowSession)))
 
             } catch (ex: Exception) {
                 logger.error("Credential has not been issued", ex)
@@ -176,6 +178,7 @@ object IssueCredentialFlowB2B {
                 }
 
                 subFlow(flow)
+                subFlow(ReceiveFinalityFlow(flowSession))
 
             } catch (ex: Exception) {
                 logger.error("Credential has not been issued", ex)

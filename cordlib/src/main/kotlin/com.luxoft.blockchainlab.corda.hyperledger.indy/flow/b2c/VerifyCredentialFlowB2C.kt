@@ -8,9 +8,9 @@ import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.ProofPredicate
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.indyUser
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.whoIsNotary
 import com.luxoft.blockchainlab.corda.hyperledger.indy.service.connectionService
+import com.luxoft.blockchainlab.hyperledger.indy.IndyUser
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialFieldReference
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialPredicate
-import com.luxoft.blockchainlab.hyperledger.indy.IndyUser
 import com.luxoft.blockchainlab.hyperledger.indy.models.Interval
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
@@ -93,7 +93,7 @@ object VerifyCredentialFlowB2C {
                 val selfSignedTx = serviceHub.signInitialTransaction(trxBuilder)
 
                 // Notarise and record the transaction in both parties' vaults.
-                subFlow(FinalityFlow(selfSignedTx))
+                subFlow(FinalityFlow(selfSignedTx, listOf()))
 
                 return true
 

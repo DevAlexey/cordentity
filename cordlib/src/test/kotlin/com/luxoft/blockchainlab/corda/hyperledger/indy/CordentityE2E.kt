@@ -2,14 +2,14 @@ package com.luxoft.blockchainlab.corda.hyperledger.indy
 
 
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.*
-import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b.*
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b.IssueCredentialFlowB2B
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b.VerifyCredentialFlowB2B
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialDefinitionId
 import com.luxoft.blockchainlab.hyperledger.indy.models.Interval
 import com.luxoft.blockchainlab.hyperledger.indy.models.SchemaId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
+import net.corda.testing.node.internal.TestStartedNode
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -20,11 +20,11 @@ import java.util.*
 
 class CordentityE2E : CordaTestBase() {
 
-    private lateinit var trustee: StartedNode<MockNode>
-    private lateinit var notary: StartedNode<MockNode>
-    private lateinit var issuer: StartedNode<MockNode>
-    private lateinit var alice: StartedNode<MockNode>
-    private lateinit var bob: StartedNode<MockNode>
+    private lateinit var trustee: TestStartedNode
+    private lateinit var notary: TestStartedNode
+    private lateinit var issuer: TestStartedNode
+    private lateinit var alice: TestStartedNode
+    private lateinit var bob: TestStartedNode
 
     @Before
     fun setup() {
@@ -40,7 +40,7 @@ class CordentityE2E : CordaTestBase() {
         setPermissions(bob, trustee)
     }
 
-    private fun issueSchema(schemaOwner: StartedNode<MockNode>, schema: Schema): SchemaId {
+    private fun issueSchema(schemaOwner: TestStartedNode, schema: Schema): SchemaId {
         val schemaFuture = schemaOwner.services.startFlow(
             CreateSchemaFlow.Authority(schema.schemaName, schema.schemaVersion, schema.schemaAttrs)
         ).resultFuture
@@ -49,8 +49,8 @@ class CordentityE2E : CordaTestBase() {
     }
 
     private fun issueCredentialDefinition(
-        credentialDefOwner: StartedNode<MockNode>,
-        schemaId: SchemaId
+            credentialDefOwner: TestStartedNode,
+            schemaId: SchemaId
     ): CredentialDefinitionId {
         val credentialDefFuture = credentialDefOwner.services.startFlow(
             CreateCredentialDefinitionFlow.Authority(schemaId)
@@ -60,10 +60,10 @@ class CordentityE2E : CordaTestBase() {
     }
 
     private fun issueCredential(
-        credentialProver: StartedNode<MockNode>,
-        credentialIssuer: StartedNode<MockNode>,
-        credentialProposal: String,
-        credentialDefId: CredentialDefinitionId
+            credentialProver: TestStartedNode,
+            credentialIssuer: TestStartedNode,
+            credentialProposal: String,
+            credentialDefId: CredentialDefinitionId
     ): String {
 
         val identifier = UUID.randomUUID().toString()
@@ -83,8 +83,8 @@ class CordentityE2E : CordaTestBase() {
     }
 
     private fun revokeCredential(
-        issuer: StartedNode<MockNode>,
-        credentialId: String
+            issuer: TestStartedNode,
+            credentialId: String
     ) {
         val flowResult = issuer.services.startFlow(
             RevokeCredentialFlow.Issuer(credentialId)
@@ -94,8 +94,8 @@ class CordentityE2E : CordaTestBase() {
     }
 
     private fun verifyCredential(
-            verifier: StartedNode<MockNode>,
-            prover: StartedNode<MockNode>,
+            verifier: TestStartedNode,
+            prover: TestStartedNode,
             attributes: List<ProofAttribute>,
             predicates: List<ProofPredicate>,
             nonRevoked: Interval = Interval.now()

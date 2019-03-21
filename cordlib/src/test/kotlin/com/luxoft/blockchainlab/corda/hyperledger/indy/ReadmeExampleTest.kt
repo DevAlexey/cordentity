@@ -3,13 +3,13 @@ package com.luxoft.blockchainlab.corda.hyperledger.indy
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.CreateCredentialDefinitionFlow
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.CreateSchemaFlow
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.ProofPredicate
-import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b.*
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b.GetDidFlowB2B
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b.IssueCredentialFlowB2B
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b.VerifyCredentialFlowB2B
 import com.luxoft.blockchainlab.hyperledger.indy.models.Interval
 import net.corda.core.identity.CordaX500Name
-import net.corda.node.internal.StartedNode
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
+import net.corda.testing.node.internal.TestStartedNode
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDateTime
@@ -18,10 +18,10 @@ import java.util.*
 
 class ReadmeExampleTest : CordaTestBase() {
 
-    private lateinit var trustee: StartedNode<MockNode>
-    private lateinit var issuer: StartedNode<MockNode>
-    private lateinit var alice: StartedNode<MockNode>
-    private lateinit var bob: StartedNode<MockNode>
+    private lateinit var trustee: TestStartedNode
+    private lateinit var issuer: TestStartedNode
+    private lateinit var alice: TestStartedNode
+    private lateinit var bob: TestStartedNode
 
     @Before
     fun setup() {
@@ -35,9 +35,9 @@ class ReadmeExampleTest : CordaTestBase() {
 
     @Test
     fun `grocery store example`() {
-        val ministry: StartedNode<InternalMockNetwork.MockNode> = issuer
-        val alice: StartedNode<*> = alice
-        val store: StartedNode<*> = bob
+        val ministry: TestStartedNode = issuer
+        val alice: TestStartedNode = alice
+        val store: TestStartedNode = bob
 
         // Each Corda node has a X500 name:
 

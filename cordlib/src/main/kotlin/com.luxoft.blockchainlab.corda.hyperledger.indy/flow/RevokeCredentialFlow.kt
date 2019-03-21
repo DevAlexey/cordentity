@@ -47,7 +47,7 @@ object RevokeCredentialFlow {
 
                 val selfSignedTx = serviceHub.signInitialTransaction(trxBuilder, ourIdentity.owningKey)
 
-                subFlow(FinalityFlow(selfSignedTx))
+                subFlow(FinalityFlow(selfSignedTx, listOf()))
 
             } catch (ex: Exception) {
                 logger.error("", ex)

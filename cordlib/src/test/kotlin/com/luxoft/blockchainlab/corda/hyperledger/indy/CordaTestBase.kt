@@ -13,13 +13,12 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.StartedNode
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.MockNodeArgs
+import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.newContext
 import org.junit.After
 import org.junit.Before
@@ -54,7 +53,7 @@ open class CordaTestBase {
     protected lateinit var net: InternalMockNetwork
         private set
 
-    protected val parties: MutableList<StartedNode<MockNode>> = mutableListOf()
+    protected val parties: MutableList<TestStartedNode> = mutableListOf()
 
     /**
      * Shares permissions from [authority] to [issuer]
@@ -63,7 +62,7 @@ open class CordaTestBase {
      * @param issuer            a node that needs permissions
      * @param authority         a node that can share permissions
      */
-    protected fun setPermissions(issuer: StartedNode<MockNode>, authority: StartedNode<MockNode>) {
+    protected fun setPermissions(issuer: TestStartedNode, authority: TestStartedNode) {
         val permissionsFuture = issuer.services.startFlow(
             AssignPermissionsFlowB2B.Issuer(authority = authority.info.singleIdentity().name, role = "TRUSTEE")
         ).resultFuture
@@ -76,14 +75,14 @@ open class CordaTestBase {
      *
      * Usage:
      *
-     *     lateinit var issuer: StartedNode<MockNode>
+     *     lateinit var issuer: TestStartedNode
      *
      *     @Before
      *     createNodes() {
      *         issuer = createPartyNode(CordaX500Name("Issuer", "London", "GB"))
      *     }
      * */
-    protected fun createPartyNode(legalName: CordaX500Name): StartedNode<MockNode> {
+    protected fun createPartyNode(legalName: CordaX500Name): TestStartedNode {
         val party = net.createPartyNode(legalName)
 
         parties.add(party)
@@ -120,7 +119,7 @@ open class CordaTestBase {
 
         net = InternalMockNetwork(
             cordappPackages = listOf("com.luxoft.blockchainlab.corda.hyperledger.indy"),
-            networkParameters = testNetworkParameters(maxTransactionSize = 10485760 * 5),
+                initialNetworkParameters = testNetworkParameters(maxTransactionSize = 10485760 * 5),
             defaultFactory = CordaTestBase::MockIndyNode
         )
     }
@@ -136,7 +135,8 @@ open class CordaTestBase {
 
         private val organisation: String = args.config.myLegalName.organisation
 
-        override fun start(): StartedNode<MockNode> {
+        override fun start(): TestStartedNode {
+
             mockkObject(ConfigHelper)
 
             every { ConfigHelper.getPoolName() } returns organisation + sessionId

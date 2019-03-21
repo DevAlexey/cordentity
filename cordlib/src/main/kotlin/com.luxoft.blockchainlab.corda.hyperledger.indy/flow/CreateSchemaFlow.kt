@@ -55,7 +55,7 @@ object CreateSchemaFlow {
 
                 val selfSignedTx = serviceHub.signInitialTransaction(trxBuilder, ourIdentity.owningKey)
 
-                subFlow(FinalityFlow(selfSignedTx))
+                subFlow(FinalityFlow(selfSignedTx, listOf()))
 
                 return schemaObj.getSchemaIdObject()
 
