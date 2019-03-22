@@ -9,7 +9,6 @@ cache:
     - $HOME/.gradle/wrapper/
 
 jdk:
-  - oraclejdk8
   - openjdk8
 
-script: ./gradlew clean build --stacktrace --debug
+script: ./gradlew clean build --stacktrace
