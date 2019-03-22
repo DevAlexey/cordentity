@@ -28,4 +28,10 @@ publishing {
     }
 }
 
+test {
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+    }
+}
+
 apply from: "$rootDir/indy-run.gradle"
