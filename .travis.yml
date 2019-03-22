@@ -11,4 +11,6 @@ cache:
 jdk:
   - openjdk8
 
-script: ./gradlew clean build --stacktrace
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install openjdk-8-jdk
