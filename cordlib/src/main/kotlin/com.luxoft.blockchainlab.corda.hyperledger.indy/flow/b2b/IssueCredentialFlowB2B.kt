@@ -1,11 +1,18 @@
-package com.luxoft.blockchainlab.corda.hyperledger.indy.flow
+package com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b
 
 import co.paralleluniverse.fibers.Suspendable
 import com.luxoft.blockchainlab.corda.hyperledger.indy.contract.IndyCredentialContract
 import com.luxoft.blockchainlab.corda.hyperledger.indy.contract.IndyCredentialDefinitionContract
 import com.luxoft.blockchainlab.corda.hyperledger.indy.data.state.IndyCredential
 import com.luxoft.blockchainlab.corda.hyperledger.indy.data.state.IndyCredentialDefinition
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.getCredentialDefinitionById
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.indyUser
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.whoIs
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.whoIsNotary
 import com.luxoft.blockchainlab.hyperledger.indy.*
+import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialDefinitionId
+import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialOffer
+import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialRequestInfo
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.*
@@ -18,7 +25,7 @@ import net.corda.core.utilities.unwrap
 /**
  * Flows to issue Indy credentials
  * */
-object IssueCredentialFlow {
+object IssueCredentialFlowB2B {
 
     /**
      * A flow to issue an Indy credential based on proposal [credProposal]
@@ -43,7 +50,7 @@ object IssueCredentialFlow {
      *
      * @note Flows starts by Issuer.
      * E.g User initially comes to university where asks for new education credential.
-     * When user verification is completed the University runs IssueCredentialFlow to produce required credential.
+     * When user verification is completed the University runs IssueCredentialFlowB2B to produce required credential.
      * */
     @InitiatingFlow
     @StartableByRPC
@@ -63,21 +70,20 @@ object IssueCredentialFlow {
                 // checking if cred def exists and can produce new credentials
                 val originalCredentialDefIn = getCredentialDefinitionById(credentialDefinitionId)
                     ?: throw IndyCredentialDefinitionNotFoundException(
-                        credentialDefinitionId.toString(),
+                        credentialDefinitionId,
                         "State doesn't exist in Corda vault"
                     )
                 val originalCredentialDef = originalCredentialDefIn.state.data
 
                 if (!originalCredentialDef.canProduceCredentials())
                     throw IndyCredentialMaximumReachedException(
-                        originalCredentialDef.credentialDefinitionId.getRevocationRegistryDefinitionId(
+                        originalCredentialDef.credentialDefinitionId.getPossibleRevocationRegistryDefinitionId(
                             IndyUser.REVOCATION_TAG
-                        ).toString()
+                        )
                     )
 
                 // issue credential
-                val offer =
-                    indyUser().createCredentialOffer(credentialDefinitionId)
+                val offer = indyUser().createCredentialOffer(credentialDefinitionId)
 
                 val signers = listOf(ourIdentity.owningKey, prover.owningKey)
                 val newCredentialOut =
@@ -132,7 +138,7 @@ object IssueCredentialFlow {
         }
     }
 
-    @InitiatedBy(Issuer::class)
+    @InitiatedBy(IssueCredentialFlowB2B.Issuer::class)
     open class Prover(private val flowSession: FlowSession) : FlowLogic<Unit>() {
 
         @Suspendable
@@ -141,10 +147,9 @@ object IssueCredentialFlow {
                 val issuer = flowSession.counterparty.name
 
                 val offer = flowSession.receive<CredentialOffer>().unwrap { offer -> offer }
-                val sessionDid = subFlow(CreatePairwiseFlow.Prover(issuer))
+                val sessionDid = subFlow(CreatePairwiseFlowB2B.Prover(issuer))
 
-                val credentialRequestInfo =
-                    indyUser().createCredentialRequest(sessionDid, offer, indyUser().defaultMasterSecretId)
+                val credentialRequestInfo = indyUser().createCredentialRequest(sessionDid, offer)
                 flowSession.send(credentialRequestInfo)
 
                 val flow = object : SignTransactionFlow(flowSession) {

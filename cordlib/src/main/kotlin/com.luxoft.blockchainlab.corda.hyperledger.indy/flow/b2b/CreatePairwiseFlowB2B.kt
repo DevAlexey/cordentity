@@ -1,9 +1,11 @@
-package com.luxoft.blockchainlab.corda.hyperledger.indy.flow
+package com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b
 
 import co.paralleluniverse.fibers.Suspendable
-import com.luxoft.blockchainlab.hyperledger.indy.IdentityDetails
-import com.luxoft.blockchainlab.hyperledger.indy.roles.getIdentity
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.indyUser
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.whoIs
+import com.luxoft.blockchainlab.hyperledger.indy.models.IdentityDetails
 import com.luxoft.blockchainlab.hyperledger.indy.utils.SerializationUtils
+import com.luxoft.blockchainlab.hyperledger.indy.utils.SerializationUtils.anyToJSON
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -12,7 +14,7 @@ import net.corda.core.utilities.unwrap
 /**
  * Utility flows to initiate a bi-directional connection with a Corda node
  * */
-object CreatePairwiseFlow {
+object CreatePairwiseFlowB2B {
 
     /**
      * An utility flow to initiate a bi-directional connection with a Corda node
@@ -29,13 +31,13 @@ object CreatePairwiseFlow {
                 val otherSide: Party = whoIs(authority)
                 val flowSession: FlowSession = initiateFlow(otherSide)
 
-                val sessionDid = flowSession.receive<String>().unwrap { theirIdentityRecord ->
-                    val identityDetails = SerializationUtils.jSONToAny<IdentityDetails>(theirIdentityRecord)
-
-                    indyUser().createSessionDid(identityDetails)
+                val sessionDid = flowSession.receive<IdentityDetails>().unwrap {
+                    indyUser().createSessionDid(it)
                 }
 
-                flowSession.send(indyUser().getIdentity(sessionDid).getIdentityRecord())
+                val identityDetails = indyUser().getIdentity(sessionDid)
+
+                flowSession.send(identityDetails)
                 return sessionDid
 
             } catch (ex: Exception) {
@@ -46,18 +48,16 @@ object CreatePairwiseFlow {
     }
 
 
-    @InitiatedBy(CreatePairwiseFlow.Prover::class)
+    @InitiatedBy(CreatePairwiseFlowB2B.Prover::class)
     open class Issuer(private val flowSession: FlowSession) : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
             try {
-                val myIdentityRecord = indyUser().getIdentity().getIdentityRecord()
+                val myIdentityRecord = indyUser().getIdentity()
 
-                flowSession.sendAndReceive<String>(myIdentityRecord).unwrap { theirIdentityRecord ->
-                    val identityDetails = SerializationUtils.jSONToAny<IdentityDetails>(theirIdentityRecord)
-
-                    indyUser().addKnownIdentities(identityDetails)
+                flowSession.sendAndReceive<IdentityDetails>(myIdentityRecord).unwrap {
+                    indyUser().addKnownIdentities(it)
                 }
             } catch (t: Throwable) {
                 logger.error("", t)

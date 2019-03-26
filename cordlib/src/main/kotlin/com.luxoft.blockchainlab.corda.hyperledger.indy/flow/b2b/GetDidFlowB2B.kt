@@ -1,8 +1,9 @@
-package com.luxoft.blockchainlab.corda.hyperledger.indy.flow
+package com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b
 
 import co.paralleluniverse.fibers.Suspendable
-import com.luxoft.blockchainlab.hyperledger.indy.IdentityDetails
-import com.luxoft.blockchainlab.hyperledger.indy.roles.getIdentity
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.indyUser
+import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.whoIs
+import com.luxoft.blockchainlab.hyperledger.indy.models.IdentityDetails
 import com.luxoft.blockchainlab.hyperledger.indy.utils.SerializationUtils
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -13,7 +14,7 @@ import net.corda.core.utilities.unwrap
 /**
  * Flows to request the DID (Decentralized ID) of a Corda party
  **/
-object GetDidFlow {
+object GetDidFlowB2B {
 
     /**
      * A flow to request the DID (Decentralized ID) of another Corda party [authority]
@@ -30,11 +31,7 @@ object GetDidFlow {
                 val otherSide: Party = whoIs(authority)
                 val flowSession: FlowSession = initiateFlow(otherSide)
 
-                return flowSession.receive<String>().unwrap {
-                    val identityDetails = SerializationUtils.jSONToAny<IdentityDetails>(it)
-
-                    identityDetails.did
-                }
+                return flowSession.receive<IdentityDetails>().unwrap { it.did }
 
             } catch (ex: Exception) {
                 logger.error("", ex)
@@ -43,13 +40,15 @@ object GetDidFlow {
         }
     }
 
-    @InitiatedBy(Initiator::class)
+    @InitiatedBy(GetDidFlowB2B.Initiator::class)
     open class Authority(private val flowSession: FlowSession) : FlowLogic<Unit>() {
 
         @Suspendable
         override fun call() {
             try {
-                flowSession.send(indyUser().getIdentity().getIdentityRecord())
+                val identityDetails = indyUser().getIdentity()
+
+                flowSession.send(identityDetails)
             } catch (e: Exception) {
                 logger.error("", e)
                 throw FlowException(e.message)
