@@ -32,7 +32,6 @@ subprojects {
 
     apply plugin: 'kotlin'
     apply plugin: 'idea'
-
     
     sourceSets {
         main.resources {

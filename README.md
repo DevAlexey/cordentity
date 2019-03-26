@@ -1,5 +1,7 @@
 # Lab Name
-Cordentity [![Build Status](https://travis-ci.com/seniorjoinu/cordentity.svg?branch=agent-service-signed)](https://travis-ci.com/seniorjoinu/cordentity)
+Cordentity 
+[![Build Status](https://travis-ci.com/seniorjoinu/cordentity.svg?branch=master)](https://travis-ci.com/seniorjoinu/cordentity)
+[![Release](https://jitpack.io/v/seniorjoinu/cordentity.svg)](https://jitpack.io/#seniorjoinu/cordentity)
 
 # Short Description
 The Cordentity app integrates [Hyperledger Indy](https://github.com/hyperledger/indy-sdk) capabilities into the opensource [Corda platform](https://github.com/corda/corda).
