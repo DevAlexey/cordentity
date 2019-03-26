@@ -5,7 +5,3 @@ dependencies {
 configurations.all {
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
 }
-
-test.doLast {
-    sleep(60 * 1000)
-}
