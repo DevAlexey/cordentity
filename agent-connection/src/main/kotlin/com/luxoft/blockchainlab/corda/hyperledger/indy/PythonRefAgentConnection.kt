@@ -126,24 +126,22 @@ class PythonRefAgentConnection : AgentConnection {
                          */
                         webSocket.receiveMessageOfType<ObjectNode>(MESSAGE_TYPES.RESPONSE_RECEIVED, pubKey).subscribe({
                             /**
-                             * The "response_received" message will contain the other party's DID and endpoint
+                             * Wait until connection_key appears in the STATE
                              */
-                            val theirPubkey = it["history"]["connection"]["DIDDoc"]["publicKey"][0]["publicKeyBase58"].asText()
-                            val theirDid = it["their_did"].asText()
-                            /**
-                             * retrieve my_did from agent's STATE
-                             */
-                            sendAsJson(StateRequest())
-                            webSocket.receiveMessageOfType<ObjectNode>(MESSAGE_TYPES.STATE_RESPONSE).subscribe { stateResponse ->
-                                val pairwise = stateResponse["content"]["pairwise_connections"].find { node ->
-                                    node["metadata"]["their_vk"].asText() == theirPubkey
-                                }
-                                if (pairwise != null) {
-                                    val indyParty = IndyParty(webSocket, theirDid, invRcv.endpoint, theirPubkey, pairwise["my_did"].asText())
-                                    indyParties[theirDid] = indyParty
-                                    observer.onSuccess(indyParty)
-                                }
-                            }
+                            waitForPairwiseConnection(pubKey).timeout(60000, TimeUnit.MILLISECONDS).subscribe({ pairwise ->
+                                val theirDid = pairwise["their_did"].asText()
+                                val indyParty = IndyParty(webSocket, theirDid,
+                                        pairwise["metadata"]["their_endpoint"].asText(),
+                                        pairwise["metadata"]["connection_key"].asText(),
+                                        pairwise["my_did"].asText())
+                                indyParties[theirDid] = indyParty
+                                observer.onSuccess(indyParty)
+                            }, { e ->
+                                if (e is TimeoutException) {
+                                    removeStateObserver(pubKey)
+                                    throw AgentConnectionException("Inviting party delayed to report to the Agent. Try increasing the timeout.")
+                                } else throw e
+                            })
                         }, { e: Throwable -> throw(e) })
                     }, { e: Throwable -> throw(e) })
                 } else {
@@ -182,14 +180,18 @@ class PythonRefAgentConnection : AgentConnection {
 
     private fun processStateResponse(stateResponse: ObjectNode) {
         stateResponse["content"]["pairwise_connections"].forEach { pairwise ->
-            val publicKey = pairwise["metadata"]["connection_key"].asText()
+            try {
+                val publicKey = pairwise["metadata"]["connection_key"].asText()
 
-            val observer = awaitingPairwiseConnections.remove(publicKey)
+                val observer = awaitingPairwiseConnections.remove(publicKey)
 
-            if (observer != null) {
-                observer.onSuccess(pairwise)
-            } else
-                currentPairwiseConnections[publicKey] = pairwise
+                if (observer != null) {
+                    observer.onSuccess(pairwise)
+                } else
+                    currentPairwiseConnections[publicKey] = pairwise
+            } catch (e: Throwable) {
+                log.warn { "invalid pairwise connection (no connection key) found in the state" }
+            }
         }
     }
 
@@ -298,14 +300,14 @@ class PythonRefAgentConnection : AgentConnection {
                         val theirDid = pairwise["their_did"].asText()
                         val indyParty = IndyParty(webSocket, theirDid,
                                 pairwise["metadata"]["their_endpoint"].asText(),
-                                pairwise["metadata"]["their_vk"].asText(),
+                                pairwise["metadata"]["connection_key"].asText(),
                                 pairwise["my_did"].asText())
                         indyParties[theirDid] = indyParty
                         observer.onSuccess(indyParty)
                     }, { e ->
                         if (e is TimeoutException) {
                             removeStateObserver(pubKey)
-                            throw AgentConnectionException("Remote IndyParty delayed to report to the Agent. Try increasing the timeout.")
+                            throw AgentConnectionException("Invited party delayed to report to the Agent. Try increasing the timeout.")
                         } else throw e
                     })
                 } else {
@@ -336,7 +338,7 @@ class PythonRefAgentConnection : AgentConnection {
                             if (pairwise != null) {
                                 observer.onSuccess(IndyParty(webSocket, partyDID,
                                         pairwise["metadata"]["their_endpoint"].asText(),
-                                        pairwise["metadata"]["their_vk"].asText(),
+                                        pairwise["metadata"]["connection_key"].asText(),
                                         pairwise["my_did"].asText()))
                             } else {
                                 observer.onSuccess(null)
@@ -365,6 +367,7 @@ object MESSAGE_TYPES {
     val ADMIN_BASE = "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/admin/1.0/"
     val ADMIN_WALLETCONNECTION_BASE = "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/admin_walletconnection/1.0/"
     val ADMIN_BASICMESSAGE_BASE = "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/admin_basicmessage/1.0/"
+    val RESPONSE = CONN_BASE + "response"
     val CONNECT = ADMIN_WALLETCONNECTION_BASE + "connect"
     val DISCONNECT = ADMIN_WALLETCONNECTION_BASE + "disconnect"
     val SEND_MESSAGE = ADMIN_BASICMESSAGE_BASE + "send_message"
@@ -390,8 +393,8 @@ data class WalletConnect(val name: String, val passphrase: String, @JsonProperty
 data class StateRequest(@JsonProperty("@type") val type: String = MESSAGE_TYPES.STATE_REQUEST)
 data class State(@JsonProperty("@type") val type: String = MESSAGE_TYPES.STATE_RESPONSE, val content: Map<String, Any>? = null)
 data class ReceiveInviteMessage(val invite: String, val label: String = "", @JsonProperty("@type") val type: String = MESSAGE_TYPES.RECEIVE_INVITE)
-data class InviteReceivedMessage(val key: String, val label: String, val endpoint: String, @JsonProperty("@type") val type: String)
-data class SendRequestMessage(val key: String, @JsonProperty("@type") val type: String = MESSAGE_TYPES.SEND_REQUEST)
+data class InviteReceivedMessage(val connection_key: String, val label: String, val endpoint: String, @JsonProperty("@type") val type: String)
+data class SendRequestMessage(val connection_key: String, @JsonProperty("@type") val type: String = MESSAGE_TYPES.SEND_REQUEST)
 data class RequestReceivedMessage(val label: String, val did: String, val endpoint: String, @JsonProperty("@type") val type: String)
 data class RequestSendResponseMessage(val did: String, @JsonProperty("@type") val type: String = MESSAGE_TYPES.SEND_RESPONSE)
 data class RequestResponseReceivedMessage(val their_did: String, val history: ObjectNode, @JsonProperty("@type") val type: String)

@@ -95,13 +95,13 @@ class AgentWebSocketClient(serverUri: URI, private val socketName: String) : Web
                 /**
                  * 'invite_received' message is routed by type + public key
                  */
-                "$type.${obj["key"].asText()}"
+                "$type.${obj["connection_key"].asText()}"
 
             MESSAGE_TYPES.RESPONSE_RECEIVED ->
                 /**
                  * 'response_received' message is routed by type + public key
                  */
-                "$type.${obj["history"]["connection~sig"]["signer"].asText()}"
+                "$type.${obj["connection_key"].asText()}"
 
             MESSAGE_TYPES.RESPONSE_SENT ->
                 /**
