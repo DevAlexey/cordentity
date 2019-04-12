@@ -107,8 +107,8 @@ class PythonRefAgentConnection : AgentConnection {
                 if (getConnectionStatus() == AgentConnectionStatus.AGENT_CONNECTED) {
                     /**
                      * To accept the invite, first inform the agent with "receive_invite" message
+                     * this is done after subscribing to "invite_received".
                      */
-                    sendAsJson(ReceiveInviteMessage(invite))
                     val pubKey = getPubkeyFromInvite(invite)
                     /**
                      * The agent must respond with "invite_received" message, containing the public key from invite
@@ -117,10 +117,7 @@ class PythonRefAgentConnection : AgentConnection {
                         /**
                          * Now instruct the agent to send the connection request with "send_request" message.
                          * The agent builds up the connection request and forwards it to the other IndyParty's endpoint,
-                         * recalling the invite by its public key
-                         */
-                        sendRequest(pubKey)
-                        /**
+                         * recalling the invite by its public key. The request is sent after the subscription to "response_received".
                          * The agent receives the response from the other party and informs the client with "response_received"
                          * message
                          */
@@ -143,7 +140,19 @@ class PythonRefAgentConnection : AgentConnection {
                                 } else throw e
                             })
                         }, { e: Throwable -> throw(e) })
+
+                        /**
+                         * Now send the request
+                         */
+                        sendRequest(pubKey)
+
                     }, { e: Throwable -> throw(e) })
+
+                    /**
+                     * Now send "receive_invite"
+                     */
+                    sendAsJson(ReceiveInviteMessage(invite))
+
                 } else {
                     throw AgentConnectionException("AgentConnection object has wrong state")
                 }
@@ -165,10 +174,14 @@ class PythonRefAgentConnection : AgentConnection {
                  * to generate the invite, send "generate_invite" message to the agent, and wait for "invite_generated"
                  * which must contain an invite
                  */
-                webSocket.sendAsJson(SendMessage(type = MESSAGE_TYPES.GENERATE_INVITE))
                 webSocket.receiveMessageOfType<ReceiveInviteMessage>(MESSAGE_TYPES.INVITE_GENERATED).subscribe({ msg ->
                     observer.onSuccess(msg.invite)
                 }, { e: Throwable -> throw(e) })
+                /**
+                 * After subscription, send the "generate_invite" request
+                 */
+                webSocket.sendAsJson(SendMessage(type = MESSAGE_TYPES.GENERATE_INVITE))
+
             } catch (e: Throwable) {
                 observer.onError(e)
             }
@@ -234,6 +247,9 @@ class PythonRefAgentConnection : AgentConnection {
                         }
                     }
                 }
+                /**
+                 * After subscription send the state request
+                 */
                 sendAsJson(StateRequest())
             }
         }
@@ -274,10 +290,10 @@ class PythonRefAgentConnection : AgentConnection {
              * TODO: suggest an improvement in pythonic indy-agent that incorporates the invite's public key in the "request" message,
              * TODO: so that it's possible to correlate "request_received" which includes "request" and the invite
              */
-            sendAsJson(RequestSendResponseMessage(it.did))
             webSocket.receiveMessageOfType<RequestResponseSentMessage>(MESSAGE_TYPES.RESPONSE_SENT, it.did).subscribe {
                 log.info { "Accepted connection request from ${it.did}" }
             }
+            sendAsJson(RequestSendResponseMessage(it.did))
         }
     }
     /**
@@ -330,7 +346,6 @@ class PythonRefAgentConnection : AgentConnection {
                         /**
                          * If not found, query agent state for the properties of the previously set pairwise connection
                          */
-                        sendAsJson(StateRequest())
                         webSocket.receiveMessageOfType<ObjectNode>(MESSAGE_TYPES.STATE_RESPONSE).subscribe { stateResponse ->
                             val pairwise = stateResponse["content"]["pairwise_connections"].find { node ->
                                 node["their_did"].asText() == partyDID
@@ -348,6 +363,7 @@ class PythonRefAgentConnection : AgentConnection {
                                 }
                             }
                         }
+                        sendAsJson(StateRequest())
                     }
                 } else {
                     throw AgentConnectionException("Agent is disconnected")
