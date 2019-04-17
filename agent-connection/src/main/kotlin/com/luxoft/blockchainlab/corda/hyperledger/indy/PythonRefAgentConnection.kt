@@ -5,10 +5,12 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.luxoft.blockchainlab.hyperledger.indy.utils.SerializationUtils
 import mu.KotlinLogging
-import rx.*
+import rx.Single
+import rx.SingleSubscriber
 import java.net.URI
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.concurrent.thread
@@ -18,6 +20,7 @@ class PythonRefAgentConnection : AgentConnection {
 
     override fun disconnect() {
         if (getConnectionStatus() == AgentConnectionStatus.AGENT_CONNECTED) {
+            pollAgentWorker.interrupt()
             webSocket.close()
             connectionStatus = AgentConnectionStatus.AGENT_DISCONNECTED
         }
@@ -36,7 +39,6 @@ class PythonRefAgentConnection : AgentConnection {
                     /**
                      * Check the agent's current state
                      */
-                    sendAsJson(StateRequest())
                     receiveMessageOfType<State>(MESSAGE_TYPES.STATE_RESPONSE).subscribe({ stateResponse ->
                         if (!checkUserLoggedIn(stateResponse, login)) {
                             /**
@@ -61,6 +63,7 @@ class PythonRefAgentConnection : AgentConnection {
                             observer.onSuccess(Unit)
                         }
                     }, { e: Throwable -> throw(e) })
+                    sendAsJson(StateRequest())
                 }
             } catch (e: Throwable) {
                 observer.onError(e)
@@ -135,7 +138,7 @@ class PythonRefAgentConnection : AgentConnection {
                                 observer.onSuccess(indyParty)
                             }, { e ->
                                 if (e is TimeoutException) {
-                                    removeStateObserver(pubKey)
+                                    awaitingPairwiseConnections.remove(pubKey)
                                     throw AgentConnectionException("Inviting party delayed to report to the Agent. Try increasing the timeout.")
                                 } else throw e
                             })
@@ -188,70 +191,60 @@ class PythonRefAgentConnection : AgentConnection {
         }
     }
 
-    private val awaitingPairwiseConnections = HashMap<String, SingleSubscriber<in JsonNode>>()
+    private val toProcessPairwiseConnections = LinkedBlockingQueue<Pair<String, SingleSubscriber<in JsonNode>>>()
     private val currentPairwiseConnections = ConcurrentHashMap<String, JsonNode>()
-
-    private fun processStateResponse(stateResponse: ObjectNode) {
-        stateResponse["content"]["pairwise_connections"].forEach { pairwise ->
-            try {
-                val publicKey = pairwise["metadata"]["connection_key"].asText()
-
-                val observer = awaitingPairwiseConnections.remove(publicKey)
-
-                if (observer != null) {
-                    observer.onSuccess(pairwise)
-                } else
-                    currentPairwiseConnections[publicKey] = pairwise
-            } catch (e: Throwable) {
-                log.warn { "invalid pairwise connection (no connection key) found in the state" }
-            }
-        }
-    }
-
-    private fun removeStateObserver(pubKey: String) {
-        synchronized(pollingLock) { awaitingPairwiseConnections.remove(pubKey) }
-    }
-
-    private val pollingLock = java.lang.Object()
-    private fun HashMap<String, SingleSubscriber<in JsonNode>>.putAndNotify(key: String, value: SingleSubscriber<in JsonNode>) {
-        synchronized(pollingLock) {
-            val wasEmpty = isEmpty()
-            put(key, value)
-            if (wasEmpty) pollingLock.notify()
-        }
-    }
+    private val awaitingPairwiseConnections = ConcurrentHashMap<String, SingleSubscriber<in JsonNode>>()
     /**
      * Agent's state polling thread. It resumes whenever [pollingLock] is being notified.
      * It also loops by itself when
      */
     private val pollAgentWorker = thread {
-        synchronized(pollingLock) {
-            while (true) {
-                /**
-                 * Sleep until a pairwise connection observer is registered.
-                 */
-                pollingLock.wait()
-                if (awaitingPairwiseConnections.size == 0) continue
-                /**
-                 * Send the request
-                 */
-                webSocket.receiveMessageOfType<ObjectNode>(MESSAGE_TYPES.STATE_RESPONSE).subscribe {state ->
-                    synchronized(pollingLock) {
-                        processStateResponse(state)
-                        if (awaitingPairwiseConnections.size > 0) {
-                            /**
-                             * Sleep to reduce polling the (local) agent
-                             */
-                            Thread.sleep(500)
-                            pollingLock.notify()
-                        }
+        fun processStateResponse(stateResponse: ObjectNode) {
+            stateResponse["content"]["pairwise_connections"].forEach { pairwise ->
+                try {
+                    val publicKey = pairwise["metadata"]["connection_key"].asText()
+
+                    val observer = awaitingPairwiseConnections.remove(publicKey)
+
+                    if (observer != null) {
+                        observer.onSuccess(pairwise)
                     }
+                    currentPairwiseConnections[publicKey] = pairwise
+                } catch (e: Throwable) {
+                    log.warn(e) { "invalid pairwise connection (no connection key) found in the state" }
                 }
-                /**
-                 * After subscription send the state request
-                 */
-                sendAsJson(StateRequest())
             }
+        }
+
+        while (!Thread.interrupted()) {
+            /**
+             * Sleep until a pairwise connection observer is registered.
+             */
+            if (awaitingPairwiseConnections.isEmpty())
+                toProcessPairwiseConnections.take().apply {
+                    awaitingPairwiseConnections[first] = second
+                }
+
+            do {
+                val pairwiseConnection = toProcessPairwiseConnections.poll()?.apply {
+                    awaitingPairwiseConnections[first] = second
+                }
+            } while (pairwiseConnection != null)
+
+            if (awaitingPairwiseConnections.isEmpty()) continue
+            /**
+             * Subscribe for the response
+             */
+            val single = webSocket.receiveMessageOfType<ObjectNode>(MESSAGE_TYPES.STATE_RESPONSE).toBlocking().toFuture()
+            /**
+             * After subscription send the state request
+             */
+            sendAsJson(StateRequest())
+            processStateResponse(single.get())
+            /**
+             * Sleep to reduce polling the (local) agent
+             */
+            Thread.sleep(500)
         }
     }
 
@@ -269,7 +262,7 @@ class PythonRefAgentConnection : AgentConnection {
                      * Otherwise put the observer in the queue and notify the worker to poll the agent state.
                      * When the worker finds the public key in the parsed state, it will notify the observer.
                      */
-                    awaitingPairwiseConnections.putAndNotify(pubKey, observer)
+                    toProcessPairwiseConnections.put(pubKey to observer)
                 }
             } catch (e: Throwable) {
                 observer.onError(e)
@@ -322,7 +315,7 @@ class PythonRefAgentConnection : AgentConnection {
                         observer.onSuccess(indyParty)
                     }, { e ->
                         if (e is TimeoutException) {
-                            removeStateObserver(pubKey)
+                            awaitingPairwiseConnections.remove(pubKey)
                             throw AgentConnectionException("Invited party delayed to report to the Agent. Try increasing the timeout.")
                         } else throw e
                     })
