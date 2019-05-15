@@ -5,7 +5,7 @@ import com.luxoft.blockchainlab.hyperledger.indy.helpers.PoolHelper
 import com.luxoft.blockchainlab.hyperledger.indy.helpers.WalletHelper
 import com.luxoft.blockchainlab.hyperledger.indy.ledger.IndyPoolLedgerService
 import com.luxoft.blockchainlab.hyperledger.indy.models.*
-import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndySDKWalletService
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndySDKWalletUser
 import junit.framework.Assert.assertFalse
 import org.hyperledger.indy.sdk.did.Did
 import org.hyperledger.indy.sdk.did.DidResults
@@ -81,15 +81,15 @@ class AnoncredsDemoTest : IndyIntegrationTest() {
         val trusteeDidInfo = createTrusteeDid(trusteeWallet)
 
         // create indy users
-        val issuerWalletService = IndySDKWalletService(issuerWallet)
+        val issuerWalletService = IndySDKWalletUser(issuerWallet)
         val issuerLedgerService = IndyPoolLedgerService(pool, issuerWallet, issuerWalletService.did)
         issuer1 = IndyUser.with(issuerWalletService).with(issuerLedgerService).build()
 
-        val issuer2WalletService = IndySDKWalletService(issuer2Wallet)
+        val issuer2WalletService = IndySDKWalletUser(issuer2Wallet)
         val issuer2LedgerService = IndyPoolLedgerService(pool, issuer2Wallet, issuer2WalletService.did)
         issuer2 = IndyUser.with(issuer2LedgerService).with(issuer2WalletService).build()
 
-        val proverWalletService = IndySDKWalletService(proverWallet)
+        val proverWalletService = IndySDKWalletUser(proverWallet)
         val proverLedgerService = IndyPoolLedgerService(pool, proverWallet, proverWalletService.did)
         prover = IndyUser.with(proverLedgerService).with(proverWalletService).build()
 

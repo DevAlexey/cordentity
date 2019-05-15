@@ -7,7 +7,8 @@ import com.luxoft.blockchainlab.hyperledger.indy.helpers.WalletHelper
 import com.luxoft.blockchainlab.hyperledger.indy.ledger.IndyPoolLedgerService
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialDefinitionId
 import com.luxoft.blockchainlab.hyperledger.indy.models.SchemaId
-import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndySDKWalletService
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndySDKWalletUser
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndyWalletFactory
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.hyperledger.indy.sdk.wallet.Wallet
 import org.junit.After
@@ -37,11 +38,21 @@ class IndyUserTest {
         PoolHelper.createOrTrunc(genesisFile, poolName)
         val pool = PoolHelper.openExisting(poolName)
 
-        val walletService = IndySDKWalletService(wallet)
+        val walletService = IndySDKWalletUser(wallet)
+        val walletFactory = object : IndyWalletFactory {
+            override fun createWallet(did: String): Wallet {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun getWallet(did: String): Wallet {
+                if (did == walletService.did) return wallet
+                TODO("not supported did: $did")
+            }
+        }
         indyUser = IndyUser
-            .with(walletService)
-            .with(IndyPoolLedgerService(pool, wallet, walletService.did))
-            .build()
+                .with(walletFactory)
+                .with(IndyPoolLedgerService(pool, walletFactory))
+                .build(walletService.did)
     }
 
     @After
@@ -67,7 +78,7 @@ class IndyUserTest {
         val schemaSeqNo = 14
         val schemaId = SchemaId.fromString("V4SGRU86Z58d6TV7PBUe6f:2:schema_education:1.0")
         val utilsId =
-            CredentialDefinitionId(indyUser.walletService.getIdentityDetails().did, 123, IndySDKWalletService.TAG)
+                CredentialDefinitionId(indyUser.walletService.getIdentityDetails().did, 123, IndySDKWalletUser.TAG)
 
         val schemaJson = """{
             "ver":"1.0",
@@ -81,8 +92,8 @@ class IndyUserTest {
             wallet,
             indyUser.walletService.getIdentityDetails().did,
             schemaJson,
-            IndySDKWalletService.TAG,
-            IndySDKWalletService.SIGNATURE_TYPE,
+                IndySDKWalletUser.TAG,
+                IndySDKWalletUser.SIGNATURE_TYPE,
             null
         ).get()
         assert(utilsId.toString() == credDefInfo.credDefId) { "Generated credDef ID doesn't match SDK' ID anymore" }

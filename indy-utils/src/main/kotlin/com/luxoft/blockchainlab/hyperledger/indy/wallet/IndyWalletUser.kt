@@ -4,10 +4,10 @@ import com.luxoft.blockchainlab.hyperledger.indy.models.*
 
 
 /**
- * [WalletService] is an interface that encapsulates [org.hyperledger.indy.sdk.wallet.Wallet] operations in perspective
+ * [IndyWalletUser] is an interface that encapsulates [org.hyperledger.indy.sdk.wallet.Wallet] operations in perspective
  *  of doing some cryptographic work that is not related to [com.luxoft.blockchainlab.hyperledger.indy.ledger.LedgerService]
  */
-interface WalletService : IndyIssuer, IndyProver, IndyVerifier, IndyTrustee
+interface IndyWalletUser : IndyIssuer, IndyProver, IndyVerifier, IndyTrustee
 
 
 /**
@@ -36,10 +36,10 @@ interface IndyIssuer : IndyWalletHolder {
      * @return [CredentialInfo] - credential and all reliable info
      */
     fun issueCredential(
-        credentialRequest: CredentialRequestInfo,
-        proposal: String,
-        offer: CredentialOffer,
-        revocationRegistryId: RevocationRegistryDefinitionId?
+            credentialRequest: CredentialRequestInfo,
+            proposal: String,
+            offer: CredentialOffer,
+            revocationRegistryId: RevocationRegistryDefinitionId?
     ): CredentialInfo
 
     /**
@@ -49,8 +49,8 @@ interface IndyIssuer : IndyWalletHolder {
      * @param credentialRevocationId [String] - revocation registry credential index
      */
     fun revokeCredential(
-        revocationRegistryId: RevocationRegistryDefinitionId,
-        credentialRevocationId: String
+            revocationRegistryId: RevocationRegistryDefinitionId,
+            credentialRevocationId: String
     ): RevocationRegistryEntry
 }
 
@@ -71,10 +71,10 @@ interface IndyProver : IndyWalletHolder {
      * @return [CredentialRequestInfo] - credential request and all reliable data
      */
     fun createCredentialRequest(
-        proverDid: String,
-        credentialDefinition: CredentialDefinition,
-        offer: CredentialOffer,
-        masterSecretId: String
+            proverDid: String,
+            credentialDefinition: CredentialDefinition,
+            offer: CredentialOffer,
+            masterSecretId: String
     ): CredentialRequestInfo
 
     /**
@@ -87,11 +87,11 @@ interface IndyProver : IndyWalletHolder {
      * @param revocationRegistryDefinition [RevocationRegistryDefinition] on [null]
      */
     fun receiveCredential(
-        credentialInfo: CredentialInfo,
-        credentialRequest: CredentialRequestInfo,
-        offer: CredentialOffer,
-        credentialDefinition: CredentialDefinition,
-        revocationRegistryDefinition: RevocationRegistryDefinition?
+            credentialInfo: CredentialInfo,
+            credentialRequest: CredentialRequestInfo,
+            offer: CredentialOffer,
+            credentialDefinition: CredentialDefinition,
+            revocationRegistryDefinition: RevocationRegistryDefinition?
     )
 
     /**
@@ -106,11 +106,11 @@ interface IndyProver : IndyWalletHolder {
      * @return [ProofInfo] - proof and all reliable data
      */
     fun createProof(
-        proofRequest: ProofRequest,
-        provideSchema: SchemaProvider,
-        provideCredentialDefinition: CredentialDefinitionProvider,
-        masterSecretId: String,
-        revocationStateProvider: RevocationStateProvider?
+            proofRequest: ProofRequest,
+            provideSchema: SchemaProvider,
+            provideCredentialDefinition: CredentialDefinitionProvider,
+            masterSecretId: String,
+            revocationStateProvider: RevocationStateProvider?
     ): ProofInfo
 
     /**
@@ -124,10 +124,10 @@ interface IndyProver : IndyWalletHolder {
      * @return [RevocationState]
      */
     fun createRevocationState(
-        revocationRegistryDefinition: RevocationRegistryDefinition,
-        revocationRegistryEntry: RevocationRegistryEntry,
-        credentialRevocationId: String,
-        timestamp: Long
+            revocationRegistryDefinition: RevocationRegistryDefinition,
+            revocationRegistryEntry: RevocationRegistryEntry,
+            credentialRevocationId: String,
+            timestamp: Long
     ): RevocationState
 
     /**
@@ -183,8 +183,8 @@ interface IndyTrustee : IndyWalletHolder {
      * @return [RevocationRegistryInfo]
      */
     fun createRevocationRegistry(
-        credentialDefinitionId: CredentialDefinitionId,
-        maxCredentialNumber: Int
+            credentialDefinitionId: CredentialDefinitionId,
+            maxCredentialNumber: Int
     ): RevocationRegistryInfo
 }
 
@@ -217,12 +217,12 @@ interface IndyVerifier {
      * @return [ProofRequest]
      */
     fun createProofRequest(
-        version: String,
-        name: String,
-        attributes: List<CredentialFieldReference>,
-        predicates: List<CredentialPredicate>,
-        nonRevoked: Interval?,
-        nonce: String = "123123"
+            version: String,
+            name: String,
+            attributes: List<CredentialFieldReference>,
+            predicates: List<CredentialPredicate>,
+            nonRevoked: Interval?,
+            nonce: String = "123123"
     ): ProofRequest
 }
 

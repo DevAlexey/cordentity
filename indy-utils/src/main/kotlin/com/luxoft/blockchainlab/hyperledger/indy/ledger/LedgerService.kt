@@ -12,14 +12,14 @@ interface LedgerService {
      *
      * @param schema [Schema]
      */
-    fun storeSchema(schema: Schema)
+    fun storeSchema(schema: Schema, did: String)
 
     /**
      * Stores revocation registry definition on ledger
      *
      * @param definition [RevocationRegistryDefinition] - revocation registry definition to store
      */
-    fun storeRevocationRegistryDefinition(definition: RevocationRegistryDefinition)
+    fun storeRevocationRegistryDefinition(definition: RevocationRegistryDefinition, did: String)
 
     /**
      * Stores revocation registry entry on ledger (when credential is just created)
@@ -29,9 +29,10 @@ interface LedgerService {
      * @param definitionType [String] - revocation registry definition type
      */
     fun storeRevocationRegistryEntry(
-        entry: RevocationRegistryEntry,
-        definitionId: String,
-        definitionType: String
+            entry: RevocationRegistryEntry,
+            definitionId: String,
+            definitionType: String,
+            did: String
     )
 
     /**
@@ -39,14 +40,14 @@ interface LedgerService {
      *
      * @param definition [CredentialDefinition] - credential definition to store
      */
-    fun storeCredentialDefinition(definition: CredentialDefinition)
+    fun storeCredentialDefinition(definition: CredentialDefinition, did: String)
 
     /**
      * Adds NYM record to ledger. E.g. "I trust this person"
      *
      * @param about [IdentityDetails] - identity details about entity that trustee wants to trust
      */
-    fun storeNym(about: IdentityDetails)
+    fun storeNym(about: IdentityDetails, did: String)
 
     /**
      * Check if credential definition exist on ledger
@@ -100,23 +101,6 @@ interface LedgerService {
      */
     fun retrieveCredentialDefinition(
         id: CredentialDefinitionId,
-        delayMs: Long = RETRY_DELAY_MS,
-        retryTimes: Int = RETRY_TIMES
-    ): CredentialDefinition?
-
-    /**
-     * Retrieves credential definition from ledger by schema Id
-     *
-     * @param id [SchemaId] - schema id
-     * @param tag [String]
-     * @param delayMs [Long]
-     * @param retryTimes [Int]
-     *
-     * @return [CredentialDefinition] or [null] if it doesn't exist in ledger
-     */
-    fun retrieveCredentialDefinition(
-        id: SchemaId,
-        tag: String,
         delayMs: Long = RETRY_DELAY_MS,
         retryTimes: Int = RETRY_TIMES
     ): CredentialDefinition?

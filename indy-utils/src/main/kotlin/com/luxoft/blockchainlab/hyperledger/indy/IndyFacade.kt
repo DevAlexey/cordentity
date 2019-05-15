@@ -2,21 +2,22 @@ package com.luxoft.blockchainlab.hyperledger.indy
 
 import com.luxoft.blockchainlab.hyperledger.indy.ledger.LedgerService
 import com.luxoft.blockchainlab.hyperledger.indy.models.*
-import com.luxoft.blockchainlab.hyperledger.indy.wallet.WalletService
-import org.hyperledger.indy.sdk.did.Did
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndyWalletFactory
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndyWalletUser
 
 const val DEFAULT_MASTER_SECRET_ID = "main"
 
 /**
- * This is the top-level interface that encapsulates work that should be done by [WalletService] and [LedgerService]
+ * This is the top-level interface that encapsulates work that should be done by [IndyWalletUser] and [LedgerService]
  *  cooperatively. Everything is abstracted as much as possible, so every valid service implementation should work.
  */
 interface IndyFacade {
-    val walletService: WalletService
+    val walletService: IndyWalletUser
     val ledgerService: LedgerService
+    val did: String
 
     /**
-     * Creates [Schema] using [WalletService] and stores it using [LedgerService]
+     * Creates [Schema] using [IndyWalletUser] and stores it using [LedgerService]
      *
      * @param name [String] - schema name
      * @param version [String] - schema version in format "d.d.d"
@@ -27,7 +28,7 @@ interface IndyFacade {
     fun createSchemaAndStoreOnLedger(name: String, version: String, attributes: List<String>): Schema
 
     /**
-     * Creates [CredentialDefinition] using [WalletService] and stores it using [LedgerService]
+     * Creates [CredentialDefinition] using [IndyWalletUser] and stores it using [LedgerService]
      *
      * @param schemaId [SchemaId] - id of schema paired with this credential definition
      * @param enableRevocation [Boolean] - flag if you need revocation be enabled
@@ -37,7 +38,7 @@ interface IndyFacade {
     fun createCredentialDefinitionAndStoreOnLedger(schemaId: SchemaId, enableRevocation: Boolean): CredentialDefinition
 
     /**
-     * Creates [RevocationRegistryDefinition] and first [RevocationRegistryEntry] using [WalletService] and stores it
+     * Creates [RevocationRegistryDefinition] and first [RevocationRegistryEntry] using [IndyWalletUser] and stores it
      * using [LedgerService]
      *
      * @param credentialDefinitionId [CredentialDefinitionId] - id of credential definition paired with this revocation
@@ -52,7 +53,7 @@ interface IndyFacade {
     ): RevocationRegistryInfo
 
     /**
-     * Creates [CredentialOffer] using [WalletService]
+     * Creates [CredentialOffer] using [IndyWalletUser]
      *
      * @param credentialDefinitionId [CredentialDefinitionId]
      *
@@ -61,7 +62,7 @@ interface IndyFacade {
     fun createCredentialOffer(credentialDefinitionId: CredentialDefinitionId): CredentialOffer
 
     /**
-     * Creates [CredentialRequest] using [WalletService]
+     * Creates [CredentialRequest] using [IndyWalletUser]
      *
      * @param proverDid [String]
      * @param offer [CredentialOffer]
@@ -76,7 +77,7 @@ interface IndyFacade {
     ): CredentialRequestInfo
 
     /**
-     * Issues [Credential] by [CredentialRequest] and [CredentialOffer] using [WalletService].
+     * Issues [Credential] by [CredentialRequest] and [CredentialOffer] using [IndyWalletUser].
      * If revocation is enabled it will hold one of [maxCredentialNumber].
      *
      * @param credentialRequest [CredentialRequestInfo] - [CredentialRequest] and all reliable info
@@ -107,7 +108,7 @@ interface IndyFacade {
     )
 
     /**
-     * Revokes previously issued [Credential] using [WalletService] and [LedgerService]
+     * Revokes previously issued [Credential] using [IndyWalletUser] and [LedgerService]
      *
      * @param revocationRegistryId [RevocationRegistryDefinitionId] - revocation registry definition id
      * @param credentialRevocationId [String] - revocation registry credential index
@@ -173,11 +174,12 @@ interface IndyFacade {
  * Builder for some [IndyFacade] implementation
  */
 abstract class IndyFacadeBuilder {
-    var builderWalletService: WalletService? = null
+    var builderWalletFactory: IndyWalletFactory? = null
     var builderLedgerService: LedgerService? = null
+    val did: String? = null
 
-    fun with(walletService: WalletService): IndyFacadeBuilder {
-        builderWalletService = walletService
+    fun with(walletFactory: IndyWalletFactory): IndyFacadeBuilder {
+        builderWalletFactory = walletFactory
         return this
     }
 
@@ -187,7 +189,7 @@ abstract class IndyFacadeBuilder {
     }
 
     /**
-     * Implement this method, but be sure that you've checked presence of [WalletService] and [LedgerService]
+     * Implement this method, but be sure that you've checked presence of [IndyWalletUser] and [LedgerService]
      */
-    abstract fun build(): IndyFacade
+    abstract fun build(did: String): IndyFacade
 }

@@ -3,18 +3,19 @@ package com.luxoft.blockchainlab.hyperledger.indy
 import com.luxoft.blockchainlab.hyperledger.indy.ledger.LedgerService
 import com.luxoft.blockchainlab.hyperledger.indy.models.*
 import com.luxoft.blockchainlab.hyperledger.indy.utils.SerializationUtils
-import com.luxoft.blockchainlab.hyperledger.indy.wallet.WalletService
-import org.hyperledger.indy.sdk.did.Did
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndySDKWalletUser
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndyWalletUser
 
 
 /**
  * The central class that encapsulates Indy SDK calls and keeps the corresponding state.
- * This is implementation of [IndyFacade] so it should support every valid [LedgerService] and [WalletService]
+ * This is implementation of [IndyFacade] so it should support every valid [LedgerService] and [IndyWalletUser]
  *  implementation.
  */
 class IndyUser(
-    override val walletService: WalletService,
-    override val ledgerService: LedgerService
+        override val walletService: IndyWalletUser,
+        override val ledgerService: LedgerService,
+        override val did: String
 ) : IndyFacade {
 
     init {
@@ -24,7 +25,7 @@ class IndyUser(
 
     override fun createSchemaAndStoreOnLedger(name: String, version: String, attributes: List<String>): Schema {
         val schema = walletService.createSchema(name, version, attributes)
-        ledgerService.storeSchema(schema)
+        ledgerService.storeSchema(schema, did)
 
         return schema
     }
@@ -37,7 +38,7 @@ class IndyUser(
             ?: throw IndySchemaNotFoundException(schemaId, "Create credential definition has been failed")
 
         val credentialDefinition = walletService.createCredentialDefinition(schema, enableRevocation)
-        ledgerService.storeCredentialDefinition(credentialDefinition)
+        ledgerService.storeCredentialDefinition(credentialDefinition, did)
 
         return credentialDefinition
     }
@@ -47,11 +48,11 @@ class IndyUser(
         maxCredentialNumber: Int
     ): RevocationRegistryInfo {
         val revocationRegistryInfo = walletService.createRevocationRegistry(credentialDefinitionId, maxCredentialNumber)
-        ledgerService.storeRevocationRegistryDefinition(revocationRegistryInfo.definition)
+        ledgerService.storeRevocationRegistryDefinition(revocationRegistryInfo.definition, did)
         ledgerService.storeRevocationRegistryEntry(
             revocationRegistryInfo.entry,
             revocationRegistryInfo.definition.id,
-            revocationRegistryInfo.definition.revocationRegistryDefinitionType
+                revocationRegistryInfo.definition.revocationRegistryDefinitionType, did
         )
 
         return revocationRegistryInfo
@@ -97,7 +98,7 @@ class IndyUser(
         ledgerService.storeRevocationRegistryEntry(
             revocationRegistryDelta,
             revocationRegistryDefinition.id,
-            revocationRegistryDefinition.revocationRegistryDefinitionType
+                revocationRegistryDefinition.revocationRegistryDefinitionType, did
         )
 
         return credentialInfo
@@ -144,7 +145,7 @@ class IndyUser(
         ledgerService.storeRevocationRegistryEntry(
             revocationRegistryEntry,
             revocationRegistryDefinition.id,
-            revocationRegistryDefinition.revocationRegistryDefinitionType
+                revocationRegistryDefinition.revocationRegistryDefinitionType, did
         )
 
         return revocationRegistryEntry
@@ -187,15 +188,15 @@ class IndyUser(
 
     override fun addKnownIdentitiesAndStoreOnLedger(identityDetails: IdentityDetails) {
         walletService.addKnownIdentities(identityDetails)
-        ledgerService.storeNym(identityDetails)
+        ledgerService.storeNym(identityDetails, did)
     }
 
     companion object : IndyFacadeBuilder() {
-        override fun build(): IndyFacade {
-            if (builderLedgerService == null || builderWalletService == null)
-                throw RuntimeException("WalletService and LedgerService should be specified")
+        override fun build(did: String): IndyFacade {
+            if (builderLedgerService == null || builderWalletFactory == null)
+                throw RuntimeException("IndyWalletUser and LedgerService should be specified")
 
-            return IndyUser(builderWalletService!!, builderLedgerService!!)
+            return IndyUser(IndySDKWalletUser(builderWalletFactory!!.getWallet(did)), builderLedgerService!!, did)
         }
     }
 
