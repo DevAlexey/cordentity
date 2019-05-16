@@ -22,7 +22,7 @@ const val RETRY_TIMES: Int = 10
  * @param wallet [Wallet] - indy user's wallet
  * @param did [String] - did to perform operations
  */
-class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory) : LedgerService {
+class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory, val readDid: String) : LedgerService {
 
     val logger = KotlinLogging.logger {}
 
@@ -75,7 +75,7 @@ class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory
     }
 
     override fun schemaExists(id: SchemaId): Boolean {
-        val schemaReq = Ledger.buildGetSchemaRequest(null, id.toString()).get()
+        val schemaReq = Ledger.buildGetSchemaRequest(readDid, id.toString()).get()
 
         return try {
             val schemaRes = Ledger.submitRequest(pool, schemaReq).get()
@@ -91,7 +91,7 @@ class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory
 
     override fun credentialDefinitionExists(credentialDefinitionId: CredentialDefinitionId): Boolean {
         return try {
-            val getCredDefRequest = Ledger.buildGetCredDefRequest(null, credentialDefinitionId.toString()).get()
+            val getCredDefRequest = Ledger.buildGetCredDefRequest(readDid, credentialDefinitionId.toString()).get()
             val getCredDefResponse = Ledger.submitRequest(pool, getCredDefRequest).get()
             val credDefIdInfo = Ledger.parseGetCredDefResponse(getCredDefResponse).get()
             SerializationUtils.jSONToAny<CredentialDefinition>(credDefIdInfo.objectJson)
@@ -105,7 +105,7 @@ class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory
 
     override fun revocationRegistryExists(id: RevocationRegistryDefinitionId): Boolean {
         return try {
-            val request = Ledger.buildGetRevocRegDefRequest(null, id.toString()).get()
+            val request = Ledger.buildGetRevocRegDefRequest(readDid, id.toString()).get()
             val response = Ledger.submitRequest(pool, request).get()
             val revRegDefJson = Ledger.parseGetRevocRegDefResponse(response).get().objectJson
             SerializationUtils.jSONToAny<RevocationRegistryDefinition>(revRegDefJson)
@@ -120,7 +120,7 @@ class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory
     override fun retrieveSchema(id: SchemaId, delayMs: Long, retryTimes: Int): Schema? {
         repeat(retryTimes) {
             try {
-                val schemaReq = Ledger.buildGetSchemaRequest(null, id.toString()).get()
+                val schemaReq = Ledger.buildGetSchemaRequest(readDid, id.toString()).get()
                 val schemaRes = Ledger.submitRequest(pool, schemaReq).get()
                 val parsedRes = Ledger.parseGetSchemaResponse(schemaRes).get()
 
@@ -141,7 +141,7 @@ class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory
     ): CredentialDefinition? {
         repeat(retryTimes) {
             try {
-                val getCredDefRequest = Ledger.buildGetCredDefRequest(null, id.toString()).get()
+                val getCredDefRequest = Ledger.buildGetCredDefRequest(readDid, id.toString()).get()
                 val getCredDefResponse = Ledger.submitRequest(pool, getCredDefRequest).get()
                 val credDefIdInfo = Ledger.parseGetCredDefResponse(getCredDefResponse).get()
 
@@ -164,7 +164,7 @@ class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory
     ): RevocationRegistryDefinition? {
         repeat(retryTimes) {
             try {
-                val request = Ledger.buildGetRevocRegDefRequest(null, id.toString()).get()
+                val request = Ledger.buildGetRevocRegDefRequest(readDid, id.toString()).get()
                 val response = Ledger.submitRequest(pool, request).get()
                 val revRegDefJson = Ledger.parseGetRevocRegDefResponse(response).get().objectJson
 
@@ -186,7 +186,7 @@ class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory
     ): Pair<Long, RevocationRegistryEntry>? {
         repeat(retryTimes) {
             try {
-                val request = Ledger.buildGetRevocRegRequest(null, id.toString(), timestamp).get()
+                val request = Ledger.buildGetRevocRegRequest(readDid, id.toString(), timestamp).get()
                 val response = Ledger.submitRequest(pool, request).get()
                 val revReg = Ledger.parseGetRevocRegResponse(response).get()
 
@@ -217,7 +217,7 @@ class IndyPoolLedgerService(val pool: Pool, val walletFactory: IndyWalletFactory
                 val from = interval.from
                     ?: -1 // according to https://github.com/hyperledger/indy-sdk/blob/master/libindy/src/api/ledger.rs:1623
 
-                val request = Ledger.buildGetRevocRegDeltaRequest(null, id.toString(), from, interval.to).get()
+                val request = Ledger.buildGetRevocRegDeltaRequest(readDid, id.toString(), from, interval.to).get()
                 val response = Ledger.submitRequest(pool, request).get()
                 val revRegDeltaJson = Ledger.parseGetRevocRegDeltaResponse(response).get()
 

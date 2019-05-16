@@ -6,6 +6,7 @@ import com.luxoft.blockchainlab.hyperledger.indy.helpers.WalletHelper
 import com.luxoft.blockchainlab.hyperledger.indy.ledger.IndyPoolLedgerService
 import com.luxoft.blockchainlab.hyperledger.indy.models.*
 import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndySDKWalletUser
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndyWalletFactory
 import junit.framework.Assert.assertFalse
 import org.hyperledger.indy.sdk.did.Did
 import org.hyperledger.indy.sdk.did.DidResults
@@ -77,25 +78,41 @@ class AnoncredsDemoTest : IndyIntegrationTest() {
         WalletHelper.createOrTrunc(proverWalletName, walletPassword)
         proverWallet = WalletHelper.openExisting(proverWalletName, walletPassword)
 
+        fun walletFactoryFactory(wallet: Wallet, inc_did: String): IndyWalletFactory {
+            return object : IndyWalletFactory {
+                override fun createWallet(did: String): Wallet {
+                    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                }
+
+                override fun getWallet(did: String): Wallet {
+                    if (did == inc_did) return wallet
+                    TODO("not supported did: $did")
+                }
+            }
+        }
+
         // create trustee did
         val trusteeDidInfo = createTrusteeDid(trusteeWallet)
 
         // create indy users
-        val issuerWalletService = IndySDKWalletUser(issuerWallet)
-        val issuerLedgerService = IndyPoolLedgerService(pool, issuerWallet, issuerWalletService.did)
-        issuer1 = IndyUser.with(issuerWalletService).with(issuerLedgerService).build()
+        val issuerWalletUser = IndySDKWalletUser(issuerWallet)
+        val issuerWalletFactory = walletFactoryFactory(issuerWallet, issuerWalletUser.did)
+        val issuerLedgerService = IndyPoolLedgerService(pool, issuerWalletFactory, issuerWalletUser.did)
+        issuer1 = IndyUser.with(issuerWalletFactory).with(issuerLedgerService).build(issuerWalletUser.did)
 
-        val issuer2WalletService = IndySDKWalletUser(issuer2Wallet)
-        val issuer2LedgerService = IndyPoolLedgerService(pool, issuer2Wallet, issuer2WalletService.did)
-        issuer2 = IndyUser.with(issuer2LedgerService).with(issuer2WalletService).build()
+        val issuer2WalletUser = IndySDKWalletUser(issuer2Wallet)
+        val issuer2WalletFactory = walletFactoryFactory(issuer2Wallet, issuer2WalletUser.did)
+        val issuer2LedgerService = IndyPoolLedgerService(pool, issuer2WalletFactory, issuer2WalletUser.did)
+        issuer2 = IndyUser.with(issuer2LedgerService).with(issuer2WalletFactory).build(issuer2WalletUser.did)
 
-        val proverWalletService = IndySDKWalletUser(proverWallet)
-        val proverLedgerService = IndyPoolLedgerService(pool, proverWallet, proverWalletService.did)
-        prover = IndyUser.with(proverLedgerService).with(proverWalletService).build()
+        val proverWalletUser = IndySDKWalletUser(proverWallet)
+        val proverWalletFactory = walletFactoryFactory(proverWallet, proverWalletUser.did)
+        val proverLedgerService = IndyPoolLedgerService(pool, proverWalletFactory, proverWalletUser.did)
+        prover = IndyUser.with(proverLedgerService).with(proverWalletFactory).build(proverWalletUser.did)
 
         // set relationships
-        linkIssuerToTrustee(trusteeWallet, trusteeDidInfo, issuerWalletService.getIdentityDetails())
-        linkIssuerToTrustee(trusteeWallet, trusteeDidInfo, issuer2WalletService.getIdentityDetails())
+        linkIssuerToTrustee(trusteeWallet, trusteeDidInfo, issuerWalletUser.getIdentityDetails())
+        linkIssuerToTrustee(trusteeWallet, trusteeDidInfo, issuer2WalletUser.getIdentityDetails())
 
         issuer1.addKnownIdentitiesAndStoreOnLedger(prover.walletService.getIdentityDetails())
 

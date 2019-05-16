@@ -51,7 +51,7 @@ class IndyUserTest {
         }
         indyUser = IndyUser
                 .with(walletFactory)
-                .with(IndyPoolLedgerService(pool, walletFactory))
+                .with(IndyPoolLedgerService(pool, walletFactory, walletService.did))
                 .build(walletService.did)
     }
 
