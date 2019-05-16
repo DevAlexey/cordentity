@@ -40,9 +40,21 @@ class IndySDKWalletUser(
     }
 
     init {
-        val didResult = Did.createAndStoreMyDid(wallet, SerializationUtils.anyToJSON(didConfig)).get()
-        this.did = didResult.did
-        this.verkey = didResult.verkey
+        var verkey: String? = null
+        var did: String? = null
+        if (didConfig.did != null) {
+            verkey = Did.keyForLocalDid(wallet, didConfig.did).get()
+            if (verkey != null) {
+                did = didConfig.did
+            }
+        }
+        if (verkey == null) {
+            val didResult = Did.createAndStoreMyDid(wallet, SerializationUtils.anyToJSON(didConfig)).get()
+            did = didResult.did
+            verkey = didResult.verkey
+        }
+        this.did = did!!
+        this.verkey = verkey!!
     }
 
     override fun createRevocationState(

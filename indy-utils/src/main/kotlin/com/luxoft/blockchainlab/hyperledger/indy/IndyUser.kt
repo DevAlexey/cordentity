@@ -196,7 +196,7 @@ class IndyUser(
             if (builderLedgerService == null || builderWalletFactory == null)
                 throw RuntimeException("IndyWalletUser and LedgerService should be specified")
 
-            return IndyUser(IndySDKWalletUser(builderWalletFactory!!.getWallet(did)), builderLedgerService!!, did)
+            return IndyUser(IndySDKWalletUser(builderWalletFactory!!.getWallet(did), DidConfig(did = did)), builderLedgerService!!, did)
         }
     }
 
