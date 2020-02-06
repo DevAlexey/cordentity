@@ -6,5 +6,7 @@ include 'cordapp'
 include 'cordlib-contracts-states'
 include 'cordapp-contracts-states'
 include 'agent-connection'
+include 'cupay-api-client'
+project(':cupay-api-client').projectDir = file('agent-connection/openapi/admin-api-client')
 
 rootProject.children.each { it.name = "${name}-${it.name}" }
