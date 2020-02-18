@@ -8,7 +8,13 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Represents remote Indy Party
  */
-class IndyParty(private val webSocket: AgentWebSocketClient, val did: String, val endpoint: String, val verkey: String, val myDid : String) : IndyPartyConnection {
+class PythonRefAgentIndyParty(
+    private val webSocket: AgentWebSocketClient,
+    val did: String,
+    val endpoint: String,
+    val verkey: String,
+    val myDid: String
+) : IndyPartyConnection {
 
     private val log = KotlinLogging.logger {}
 

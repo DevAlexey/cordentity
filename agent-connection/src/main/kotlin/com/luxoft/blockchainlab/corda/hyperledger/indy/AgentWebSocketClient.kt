@@ -273,7 +273,7 @@ class AgentWebSocketClient(serverUri: URI, private val socketName: String) : Web
     /**
      * Receives a serialized object from another IndyParty (@from), deserialize it and emit the result
      */
-    fun <T : Any> receiveClassObject(className: Class<T>, from: IndyParty): Single<T> {
+    fun <T : Any> receiveClassObject(className: Class<T>, from: IndyPartyConnection): Single<T> {
         return Single.create { observer ->
             try {
                 popClassObject(className, from).subscribe({ objectJson ->
@@ -289,11 +289,13 @@ class AgentWebSocketClient(serverUri: URI, private val socketName: String) : Web
         }
     }
 
-    inline fun <reified T : Any> receiveClassObject(from: IndyParty) = receiveClassObject(T::class.java, from)
+    inline fun <reified T : Any> receiveClassObject(from: IndyPartyConnection) = receiveClassObject(T::class.java, from)
 
-    fun sendClassObject(message: TypedBodyMessage, counterParty: IndyParty) = sendAsJson(SendMessage(counterParty.did, message, from = counterParty.myDid))
+    fun sendClassObject(message: TypedBodyMessage, counterParty: IndyPartyConnection) =
+        sendAsJson(SendMessage(counterParty.partyDID(), message, from = counterParty.myDID()))
 
-    inline fun <reified T : Any> sendClassObject(message: T, counterParty: IndyParty) = sendClassObject(TypedBodyMessage(message, T::class.java.canonicalName), counterParty)
+    inline fun <reified T : Any> sendClassObject(message: T, counterParty: IndyPartyConnection) =
+        sendClassObject(TypedBodyMessage(message, T::class.java.canonicalName), counterParty)
 
     /**
      * Pops message by key, subscribes on such message, if the queue is empty
@@ -321,10 +323,10 @@ class AgentWebSocketClient(serverUri: URI, private val socketName: String) : Web
      * Subscribes on a message containing an object coming from another IndyParty (@from)
      * Emits a Single<> serialized object
      */
-    private fun <T : Any> popClassObject(className: Class<T>, from: IndyParty): Observable<String> {
+    private fun <T : Any> popClassObject(className: Class<T>, from: IndyPartyConnection): Observable<String> {
         return Observable.create<String> { observer ->
             try {
-                popMessage("${className.canonicalName}.${from.did}", observer)
+                popMessage("${className.canonicalName}.${from.partyDID()}", observer)
             } catch (e: Throwable) {
                 observer.onError(e)
             }

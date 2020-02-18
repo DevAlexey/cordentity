@@ -345,7 +345,8 @@ class PythonRefAgentConnection : AgentConnection {
                                         .timeout(operationTimeoutMs, TimeUnit.MILLISECONDS)
                                         .subscribe({ pairwise ->
                                     val theirDid = pairwise["their_did"].asText()
-                                    val indyParty = IndyParty(webSocket, theirDid,
+                                            val indyParty = PythonRefAgentIndyParty(
+                                                webSocket, theirDid,
                                         pairwise["metadata"]["their_endpoint"].asText(),
                                         pairwise["metadata"]["connection_key"].asText(),
                                         pairwise["my_did"].asText())
@@ -566,7 +567,8 @@ class PythonRefAgentConnection : AgentConnection {
                         .timeout(timeoutMs, TimeUnit.MILLISECONDS)
                         .subscribe({ pairwise ->
                     val theirDid = pairwise["their_did"].asText()
-                    val indyParty = IndyParty(webSocket, theirDid,
+                            val indyParty = PythonRefAgentIndyParty(
+                                webSocket, theirDid,
                         pairwise["metadata"]["their_endpoint"].asText(),
                         pairwise["metadata"]["connection_key"].asText(),
                         pairwise["my_did"].asText())
@@ -606,7 +608,9 @@ class PythonRefAgentConnection : AgentConnection {
                                 node["their_did"].asText() == partyDID
                             }
                             if (pairwise != null) {
-                                observer.onSuccess(IndyParty(webSocket, partyDID,
+                                observer.onSuccess(
+                                    PythonRefAgentIndyParty(
+                                        webSocket, partyDID,
                                         pairwise["metadata"]["their_endpoint"].asText(),
                                         pairwise["metadata"]["connection_key"].asText(),
                                         pairwise["my_did"].asText()))
